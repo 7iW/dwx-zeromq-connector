@@ -1,4 +1,10 @@
-﻿//+-------------------------------------------------------------------+
+/**************************************************/
+// My ZeroMQ Service based on DWX_ZeroMQ_Service_v1.0.0.mq5
+//
+
+// #define _DEBUG
+
+//+-------------------------------------------------------------------+
 //|     DWX_ZeroMQ_Service_v1.0.0.mq5                                 |
 //|     Based on DWX_ZeroMQ_Server_v2.0.1_RC8.mq4                     |
 //|     @author: Darwinex Labs (www.darwinex.com)                     |
@@ -67,7 +73,7 @@ input string t1="--- ZeroMQ Configuration ---";
 input bool Publish_MarketData=false;
 input bool Verbose=true;
 
-string Publish_Symbols[7]={"EURUSD","GBPUSD","USDJPY","USDCAD","AUDUSD","NZDUSD","USDCHF"};
+string Publish_Symbols[7]= {"EURUSD","GBPUSD","USDJPY","USDCAD","AUDUSD","NZDUSD","USDCHF"};
 ulong  Last_MqlTicks_Times_Msc[7];
 int Publish_Symbols_Digits[7];
 
@@ -82,7 +88,7 @@ ulong  Last_MqlTicks_Times_Msc[28];
 int Publish_Symbols_Digits[28];
 */
 // CREATE ZeroMQ Context
-Context context(PROJECT_NAME);
+Context context("__3kewducdxhkd__");
 
 // CREATE ZMQ_PUSH SOCKET
 Socket pushSocket(context,ZMQ_PUSH);
@@ -106,6 +112,7 @@ CTrade tradeHelper;
 //+------------------------------------------------------------------+
 void OnStart()
   {
+   Debug("We are in DEBUG mode, as _DEBUG is defined.")
    if(!ServiceInit())
      {
       Print("Service initialization failed!");
@@ -115,7 +122,7 @@ void OnStart()
      }
 
 // while(!IsStopped())
-   while(CheckServiceStatus())
+   while(CheckServiceStatus()) // This is the main loop
      {
       if(Publish_MarketData)
         {
@@ -143,7 +150,7 @@ bool ServiceInit(void)
   {
    bool init_result=false;
    context.setBlocky(false);
-/* Set Socket Options */
+   /* Set Socket Options */
 
 // Send responses to PULL_PORT that client is listening on.
    pushSocket.setSendHighWaterMark(1);
@@ -218,7 +225,7 @@ void ServiceDeinit(void)
      }
 
 // Destroy ZeroMQ Context
-   context.destroy(0);
+// context.destroy(0);
 
    Print("'"+PROJECT_NAME+"' stopped.");
   }
@@ -237,9 +244,9 @@ bool CheckServiceStatus()
 //+------------------------------------------------------------------+
 //|  Procedure collecting and publishing new rates data              |
 //+------------------------------------------------------------------+
-// Unlike using functions 'OnTick' and 'SymbolInfoTick'      
-// here no any new quote will be missed. Additionally every rate   
-// will be sent only once.                                         
+// Unlike using functions 'OnTick' and 'SymbolInfoTick'
+// here no any new quote will be missed. Additionally every rate
+// will be sent only once.
 // Note: If mql4|mql5 application queue already contains NewTick event
 // or OnTick|OnCalculate function is been executed no new NewTick event
 // is added to the queue. The terminal can simultaneously receive
@@ -255,13 +262,13 @@ void CollectAndPublish(void)
       if(received>0)
         {
          string data_str="";
-         for(int j=0;j<received;j++)
+         for(int j=0; j<received; j++)
            {
             // '#' - single tick data delimiter (if more than one new tick)
             if(data_str!="")
                data_str+="#";
             // Note: time in milliseconds since 1970.01.01 00:00:00.001. To be formatted on client side.
-            // Note 2: date sent in mql string format: 23 bytes, raw miliseconds: 13 bytes 
+            // Note 2: date sent in mql string format: 23 bytes, raw miliseconds: 13 bytes
             data_str+=IntegerToString(tick_array[j].time_msc)
                       +";"+DoubleToString(tick_array[j].bid,Publish_Symbols_Digits[i])+";"
                       +DoubleToString(tick_array[j].ask,Publish_Symbols_Digits[i]);
@@ -288,8 +295,12 @@ void MessageHandler(ZmqMsg &_request)
 
    if(_request.size()>0)
      {
-      // Get data from request   
+      // Get data from request
       ArrayResize(_data,(int)(_request.size()));
+      // Even though the `getData` method in `Include/Zmq/ZmqMsg.mqh/ZmqMsg.getData`
+      // calls ArrayResize itself if `_data` is too short, the above call to ArrayResize
+      // makes sure that `_data` isn't too *long*; it ensures that we don't have garbage
+      // data left over at the end of our `_data` array.
       _request.getData(_data);
       string dataStr=CharArrayToString(_data);
       Print(dataStr);
@@ -325,48 +336,48 @@ void InterpretZmqMessage(Socket &pSocket,string &compArray[])
 
 // NOTE: datetime has format: 'YYYY.MM.DD hh:mm:ss'
 
-/*
-      If compArray[0] = ACTION: one from [POS_OPEN,POS_MODIFY,POS_CLOSE,
-         POS_CLOSE_PARTIAL,POS_CLOSE_MAGIC,POS_CLOSE_ALL,ORD_OPEN,ORD_MODIFY,ORD_DELETE,ORD_DELETE_ALL]
-         compArray[1] = TYPE: one from [ORDER_TYPE_BUY,ORDER_TYPE_SELL only used when ACTION=POS_OPEN]
-         or from [ORDER_TYPE_BUY_LIMIT,ORDER_TYPE_SELL_LIMIT,ORDER_TYPE_BUY_STOP,
-         ORDER_TYPE_SELL_STOP only used when ACTION=ORD_OPEN]
-         
-         ORDER TYPES: 
-         https://www.mql5.com/en/docs/constants/tradingconstants/orderproperties#enum_order_type
-         
-         ORDER_TYPE_BUY = 0
-         ORDER_TYPE_SELL = 1
-         ORDER_TYPE_BUY_LIMIT = 2
-         ORDER_TYPE_SELL_LIMIT = 3
-         ORDER_TYPE_BUY_STOP = 4
-         ORDER_TYPE_SELL_STOP = 5
-         
-         In this version ORDER_TYPE_BUY_STOP_LIMIT, ORDER_TYPE_SELL_STOP_LIMIT
-         and ORDER_TYPE_CLOSE_BY are ignored.
-         
-         compArray[2] = Symbol (e.g. EURUSD, etc.)
-         compArray[3] = Open/Close Price (ignored if ACTION = POS_MODIFY|ORD_MODIFY)
-         compArray[4] = SL
-         compArray[5] = TP
-         compArray[6] = Trade Comment
-         compArray[7] = Lots
-         compArray[8] = Magic Number
-         compArray[9] = Ticket Number (all type of modify|close|delete)
-   */
+   /*
+         If compArray[0] = ACTION: one from [POS_OPEN,POS_MODIFY,POS_CLOSE,
+            POS_CLOSE_PARTIAL,POS_CLOSE_MAGIC,POS_CLOSE_ALL,ORD_OPEN,ORD_MODIFY,ORD_DELETE,ORD_DELETE_ALL]
+            compArray[1] = TYPE: one from [ORDER_TYPE_BUY,ORDER_TYPE_SELL only used when ACTION=POS_OPEN]
+            or from [ORDER_TYPE_BUY_LIMIT,ORDER_TYPE_SELL_LIMIT,ORDER_TYPE_BUY_STOP,
+            ORDER_TYPE_SELL_STOP only used when ACTION=ORD_OPEN]
+
+            ORDER TYPES:
+            https://www.mql5.com/en/docs/constants/tradingconstants/orderproperties#enum_order_type
+
+            ORDER_TYPE_BUY = 0
+            ORDER_TYPE_SELL = 1
+            ORDER_TYPE_BUY_LIMIT = 2
+            ORDER_TYPE_SELL_LIMIT = 3
+            ORDER_TYPE_BUY_STOP = 4
+            ORDER_TYPE_SELL_STOP = 5
+
+            In this version ORDER_TYPE_BUY_STOP_LIMIT, ORDER_TYPE_SELL_STOP_LIMIT
+            and ORDER_TYPE_CLOSE_BY are ignored.
+
+            compArray[2] = Symbol (e.g. EURUSD, etc.)
+            compArray[3] = Open/Close Price (ignored if ACTION = POS_MODIFY|ORD_MODIFY)
+            compArray[4] = SL
+            compArray[5] = TP
+            compArray[6] = Trade Comment
+            compArray[7] = Lots
+            compArray[8] = Magic Number
+            compArray[9] = Ticket Number (all type of modify|close|delete)
+      */
 
 // Only simple number to process
    ENUM_DWX_SERV_ACTION switch_action=(ENUM_DWX_SERV_ACTION)StringToInteger(compArray[0]);
 
-/* Setup processing variables */
+   /* Setup processing variables */
    string zmq_ret="";
    string ret = "";
    int ticket = -1;
    bool ans=false;
 
-/****************************
-    * PERFORM SOME CHECKS HERE *
-    ****************************/
+   /****************************
+   * PERFORM SOME CHECKS HERE *
+   ****************************/
    if(CheckOpsStatus(pSocket,(int)switch_action)==true)
      {
       switch(switch_action)
@@ -495,26 +506,30 @@ bool CheckOpsStatus(Socket &pSocket,int sFlag)
          InformPullClient(pSocket,"{'_response': 'TRADING_IS_NOT_ALLOWED__ABORTED_COMMAND'}");
          return(false);
         }
-      else if(!AccountInfoInteger(ACCOUNT_TRADE_EXPERT))
-        {
-         InformPullClient(pSocket,"{'_response': 'EA_IS_DISABLED__ABORTED_COMMAND'}");
-         return(false);
-        }
-      else if(!TerminalInfoInteger(TERMINAL_DLLS_ALLOWED))
-        {
-         InformPullClient(pSocket,"{'_response': 'DLLS_DISABLED__ABORTED_COMMAND'}");
-         return(false);
-        }
-      else if(!MQLInfoInteger(MQL_DLLS_ALLOWED))
-        {
-         InformPullClient(pSocket,"{'_response': 'LIBS_DISABLED__ABORTED_COMMAND'}");
-         return(false);
-        }
-      else if(!TerminalInfoInteger(TERMINAL_CONNECTED))
-        {
-         InformPullClient(pSocket,"{'_response': 'NO_BROKER_CONNECTION__ABORTED_COMMAND'}");
-         return(false);
-        }
+      else
+         if(!AccountInfoInteger(ACCOUNT_TRADE_EXPERT))
+           {
+            InformPullClient(pSocket,"{'_response': 'EA_IS_DISABLED__ABORTED_COMMAND'}");
+            return(false);
+           }
+         else
+            if(!TerminalInfoInteger(TERMINAL_DLLS_ALLOWED))
+              {
+               InformPullClient(pSocket,"{'_response': 'DLLS_DISABLED__ABORTED_COMMAND'}");
+               return(false);
+              }
+            else
+               if(!MQLInfoInteger(MQL_DLLS_ALLOWED))
+                 {
+                  InformPullClient(pSocket,"{'_response': 'LIBS_DISABLED__ABORTED_COMMAND'}");
+                  return(false);
+                 }
+               else
+                  if(!TerminalInfoInteger(TERMINAL_CONNECTED))
+                    {
+                     InformPullClient(pSocket,"{'_response': 'NO_BROKER_CONNECTION__ABORTED_COMMAND'}");
+                     return(false);
+                    }
      }
    return(true);
   }
@@ -562,7 +577,7 @@ void DWX_GetData(string &compArray[],string &zmq_ret)
    zmq_ret+="'_action': 'GET_DATA'";
 
    if(time_count>0 && (time_count==open_count && time_count==close_count
-      && time_count==high_count && time_count==low_count))
+                       && time_count==high_count && time_count==low_count))
      {
       zmq_ret+=", '_ohlc_data': {";
 
@@ -625,25 +640,26 @@ void DWX_GetTickData(string &compArray[],string &zmq_ret)
         {
          Add_Error_Description(GetLastError(),zmq_ret);
         }
-      else if(copied==0)
-        {
-         zmq_ret+=", "+"'_response': 'NO_TICKS_AVAILABLE'";
-        }
       else
-        {
-         zmq_ret+=", '_data': {";
-
-         for(int i=0; i<copied; i++)
+         if(copied==0)
            {
-            if(i>0)
-               zmq_ret+=", ";
-
-            zmq_ret+="'"+TimeToString((long)(tck_array[i].time_msc/1000.0),TIME_DATE|TIME_SECONDS)
-                     +"."+IntegerToString((long)fmod(tck_array[i].time_msc,1000),3,'0')
-                     +"': ["+DoubleToString(tck_array[i].bid)+", "+DoubleToString(tck_array[i].ask)+"]";
+            zmq_ret+=", "+"'_response': 'NO_TICKS_AVAILABLE'";
            }
-         zmq_ret+="}";
-        }
+         else
+           {
+            zmq_ret+=", '_data': {";
+
+            for(int i=0; i<copied; i++)
+              {
+               if(i>0)
+                  zmq_ret+=", ";
+
+               zmq_ret+="'"+TimeToString((long)(tck_array[i].time_msc/1000.0),TIME_DATE|TIME_SECONDS)
+                        +"."+IntegerToString((long)fmod(tck_array[i].time_msc,1000),3,'0')
+                        +"': ["+DoubleToString(tck_array[i].bid)+", "+DoubleToString(tck_array[i].ask)+"]";
+              }
+            zmq_ret+="}";
+           }
      }
    else
      {
@@ -947,7 +963,8 @@ bool DWX_CloseAtMarket(double size,string &zmq_ret)
    while(true)
      {
       retries--;
-      if(retries < 0) return(false);
+      if(retries < 0)
+         return(false);
 
       if(DWX_IsTradeAllowed(30,zmq_ret)==1)
         {
@@ -1287,3 +1304,4 @@ void Add_Error_Description(uint error_code,string &out_string)
    out_string+=", "+"'_response': '"+IntegerToString(error_code)+"', 'response_value': '"+GetErrorDescription(error_code)+"'";
   }
 //+------------------------------------------------------------------+
+
