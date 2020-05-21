@@ -90,6 +90,54 @@ class DWX_ZeroMQ_Connector:
         self._SUB_PORT = _SUB_PORT
 
         # Create Sockets
+        # Bind PUSH Socket to send commands to MetaTrader
+        # Connect PULL Socket to receive command responses from MetaTrader
+        # Connect SUB Socket to receive market data from MetaTrader
+        # Initialize POLL set and register PULL and SUB sockets
+        self._create_sockets_and_initialize_poller()
+
+        # Start listening for responses to commands and new market data
+        self._string_delimiter = _delimiter
+
+        # Tick data packages (time in ms, Ask price, Bid price) delimiter
+        self._packet_data_delimiter = "#"
+
+        # BID/ASK Market Data Subscription Threads ({SYMBOL: Thread})
+        self._MarketData_Thread = None
+
+        # Socket Monitor Threads
+        self._PUSH_Monitor_Thread = None
+        self._PULL_Monitor_Thread = None
+
+        # Market Data Dictionary by Symbol (holds tick data)
+        self._Market_Data_DB = {}  # {SYMBOL: {TIMESTAMP: (BID, ASK)}}
+
+        # Temporary Order STRUCT for convenience wrappers later.
+        self.temp_order_dict = self._generate_default_order_dict()
+
+        # Thread returns the most recently received DATA block here
+        self._thread_data_output = None
+
+        # Verbosity
+        self._verbose = _verbose
+
+        # ZMQ Poller Timeout
+        self._poll_timeout = _poll_timeout
+
+        # Global Sleep Delay
+        self._sleep_delay = _sleep_delay
+
+        # Begin polling for PULL / SUB data
+        self._start_poller()
+
+        ###########################################
+        # Enable/Disable ZeroMQ Socket Monitoring #
+        ###########################################
+        if _monitor == True:
+            self._setup_ZMQ_monitoring()
+
+    def _create_sockets_and_initialize_poller(self):
+        # Create Sockets
         self._PUSH_SOCKET = self._ZMQ_CONTEXT.socket(zmq.PUSH)
         self._PUSH_SOCKET.setsockopt(zmq.SNDHWM, 1)
         self._PUSH_SOCKET_STATUS = {"state": True, "latest_event": "N/A"}
@@ -126,37 +174,7 @@ class DWX_ZeroMQ_Connector:
         self._poller.register(self._PULL_SOCKET, zmq.POLLIN)
         self._poller.register(self._SUB_SOCKET, zmq.POLLIN)
 
-        # Start listening for responses to commands and new market data
-        self._string_delimiter = _delimiter
-
-        # Tick data packages (time in ms, Ask price, Bid price) delimiter
-        self._packet_data_delimiter = "#"
-
-        # BID/ASK Market Data Subscription Threads ({SYMBOL: Thread})
-        self._MarketData_Thread = None
-
-        # Socket Monitor Threads
-        self._PUSH_Monitor_Thread = None
-        self._PULL_Monitor_Thread = None
-
-        # Market Data Dictionary by Symbol (holds tick data)
-        self._Market_Data_DB = {}  # {SYMBOL: {TIMESTAMP: (BID, ASK)}}
-
-        # Temporary Order STRUCT for convenience wrappers later.
-        self.temp_order_dict = self._generate_default_order_dict()
-
-        # Thread returns the most recently received DATA block here
-        self._thread_data_output = None
-
-        # Verbosity
-        self._verbose = _verbose
-
-        # ZMQ Poller Timeout
-        self._poll_timeout = _poll_timeout
-
-        # Global Sleep Delay
-        self._sleep_delay = _sleep_delay
-
+    def _start_poller(self):
         # Begin polling for PULL / SUB data
         self._MarketData_Thread = Thread(
             target=self._DWX_ZMQ_Poll_Data_,
@@ -169,45 +187,41 @@ class DWX_ZeroMQ_Connector:
         self._MarketData_Thread.daemon = True
         self._MarketData_Thread.start()
 
-        ###########################################
-        # Enable/Disable ZeroMQ Socket Monitoring #
-        ###########################################
-        if _monitor == True:
+    def _setup_ZMQ_monitoring(self):
+        # ZeroMQ Monitor Event Map
+        self._MONITOR_EVENT_MAP = {}
 
-            # ZeroMQ Monitor Event Map
-            self._MONITOR_EVENT_MAP = {}
+        print("\n[KERNEL] Retrieving ZeroMQ Monitor Event Names:\n")
 
-            print("\n[KERNEL] Retrieving ZeroMQ Monitor Event Names:\n")
+        for name in dir(zmq):
+            if name.startswith("EVENT_"):
+                value = getattr(zmq, name)
+                print(f"{value}\t\t:\t{name}")
+                self._MONITOR_EVENT_MAP[value] = name
 
-            for name in dir(zmq):
-                if name.startswith("EVENT_"):
-                    value = getattr(zmq, name)
-                    print(f"{value}\t\t:\t{name}")
-                    self._MONITOR_EVENT_MAP[value] = name
+        print("\n[KERNEL] Socket Monitoring Config -> DONE!\n")
 
-            print("\n[KERNEL] Socket Monitoring Config -> DONE!\n")
+        # Disable PUSH/PULL sockets and let MONITOR events control them.
+        self._PUSH_SOCKET_STATUS["state"] = False
+        self._PULL_SOCKET_STATUS["state"] = False
 
-            # Disable PUSH/PULL sockets and let MONITOR events control them.
-            self._PUSH_SOCKET_STATUS["state"] = False
-            self._PULL_SOCKET_STATUS["state"] = False
+        # PUSH
+        self._PUSH_Monitor_Thread = Thread(
+            target=self._DWX_ZMQ_EVENT_MONITOR_,
+            args=("PUSH", self._PUSH_SOCKET.get_monitor_socket(),),
+        )
 
-            # PUSH
-            self._PUSH_Monitor_Thread = Thread(
-                target=self._DWX_ZMQ_EVENT_MONITOR_,
-                args=("PUSH", self._PUSH_SOCKET.get_monitor_socket(),),
-            )
+        self._PUSH_Monitor_Thread.daemon = True
+        self._PUSH_Monitor_Thread.start()
 
-            self._PUSH_Monitor_Thread.daemon = True
-            self._PUSH_Monitor_Thread.start()
+        # PULL
+        self._PULL_Monitor_Thread = Thread(
+            target=self._DWX_ZMQ_EVENT_MONITOR_,
+            args=("PULL", self._PULL_SOCKET.get_monitor_socket(),),
+        )
 
-            # PULL
-            self._PULL_Monitor_Thread = Thread(
-                target=self._DWX_ZMQ_EVENT_MONITOR_,
-                args=("PULL", self._PULL_SOCKET.get_monitor_socket(),),
-            )
-
-            self._PULL_Monitor_Thread.daemon = True
-            self._PULL_Monitor_Thread.start()
+        self._PULL_Monitor_Thread.daemon = True
+        self._PULL_Monitor_Thread.start()
 
     ##########################################################################
 
