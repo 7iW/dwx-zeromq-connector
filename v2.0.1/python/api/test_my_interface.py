@@ -3,30 +3,65 @@ from .my_interface import command, ORDER_TYPE, ACTION
 import pytest
 from warnings import catch_warnings
 
+
 class DWX_ZeroMQ_Connector_STUB(my_interface.DWX_Connector):
     """Like DWX_ZeroMQ_Connector, but without the side effects."""
+
     def _create_sockets_and_initialize_poller(self):
         pass
+
     def _start_poller(self):
         pass
+
     def _setup_ZMQ_monitoring(self):
         pass
 
-def test_ticket_tracking(irrelevant_ticket_number):
-    mt5 = DWX_ZeroMQ_Connector_STUB()
-    assert mt5.ticket is None
-    mt5._set_response_(dict(_ticket=irrelevant_ticket_number))
-    assert mt5.ticket == irrelevant_ticket_number
+def test_my_DWX_Connector_wrapper_has_BUY_method_and_SELL_method_etc(stub_instance):
+    for action in ACTION:
+        assert hasattr(stub_instance, action.name)
+    for order_type in ORDER_TYPE:
+        assert hasattr(stub_instance, action.name)
 
-def test_my_DWX_Connector_wrapper_has_send_command_method():
-    assert hasattr(my_interface.DWX_Connector, "send_command")
 
-def test_my_DWX_Connector_wrapper_has_send_method():
-    assert hasattr(my_interface.DWX_Connector, "send")
+def test_command_rejectes_kwargs_that_are_not_required(
+    irrelevant_ticket, irrelevant_lots, irrelevant_sl
+):
+    """If a keyword arg is not REQUIRED by the given ACTION or ORDER_TYPE passed to
+    `command`, then `command` should raise a TypeError"""
+    with pytest.raises(TypeError) as excinfo:
+        command(
+            ACTION.POS_CLOSE_PARTIAL,
+            ticket=irrelevant_ticket,
+            lots=irrelevant_lots,
+            sl=irrelevant_sl,
+        )
+    assert str(excinfo.value).startswith(
+        "Got unexpected keyword argument 'sl' for action"
+    )
+    assert "POS_CLOSE_PARTIAL" in str(excinfo.value)
+
+
+def test_ticket_tracking(stub_instance, irrelevant_ticket):
+    assert stub_instance.ticket is None
+    stub_instance._set_response_(dict(_ticket=irrelevant_ticket))
+    assert stub_instance.ticket == irrelevant_ticket
+
+
+def test_my_DWX_Connector_wrapper_has_send_command_method(stub_instance):
+    assert hasattr(stub_instance, "send_command")
+
+
+def test_my_DWX_Connector_wrapper_has__call__method(stub_instance):
+    assert callable(stub_instance)
 
 
 @pytest.fixture
-def irrelevant_ticket_number():
+def stub_instance():
+    return DWX_ZeroMQ_Connector_STUB()
+
+
+@pytest.fixture
+def irrelevant_ticket():
     return 9876543210
 
 
@@ -56,9 +91,24 @@ def irrelevant_tp():
 
 
 @pytest.mark.parametrize("order_type", list(ORDER_TYPE))
-def test_ORDER_TYPE__str__conversion(order_type):
+def test_ORDER_TYPE__str__conversion_looks_like_int(order_type):
+    """Make sure that the __str__ method for out IntEnum subclass gives something that
+    actually looks like an int, e.g. '1'."""
     assert int(str(order_type)) == order_type
     assert int("{}".format(order_type)) == order_type
+
+
+@pytest.mark.parametrize("action", [ACTION.POS_MODIFY, ACTION.ORD_MODIFY])
+def test_MODIFY_sl_and_tp_default_to_unchanged(action, irrelevant_ticket):
+    cmd = command(action, ticket=irrelevant_ticket)
+    assert cmd["_SL"] == -1
+    assert cmd["_TP"] == -1
+    cmd = command(action, ticket=irrelevant_ticket, sl=0)
+    assert cmd["_SL"] == 0
+    assert cmd["_TP"] == -1
+    cmd = command(action, ticket=irrelevant_ticket, tp=10)
+    assert cmd["_SL"] == -1
+    assert cmd["_TP"] == 10
 
 
 @pytest.mark.parametrize("order_type", [ORDER_TYPE.BUY, ORDER_TYPE.SELL])
@@ -108,8 +158,6 @@ def test_command_fails_on_non_ORDER_TYPE(irrelevant_symbol, irrelevant_lots):
 def test_not_implemented_ACTIONs(action):
     with pytest.raises(NotImplementedError):
         command(action)
-
-
 
 
 def test__used_compArray_indices_by_action():

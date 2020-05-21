@@ -13,6 +13,7 @@ from .my_DWX_ZeroMQ_Connector_v1_0 import DWX_ZeroMQ_Connector
 
 class TicketTrackerMixin:
     """Keep track of the ticket of the most recent order with the `ticket` property."""
+
     def _set_response_(self, _resp=None):
         if isinstance(_resp, dict):
             if "_ticket" in _resp:
@@ -23,7 +24,74 @@ class TicketTrackerMixin:
         return self._most_recent_ticket
 
 
-class DWX_Connector(TicketTrackerMixin, DWX_ZeroMQ_Connector):
+class DirectMethodAccessMixin:
+    """We want to be able to access ACTIONs and ORDER_TYPEs via methods."""
+
+    def HEARTBEAT(self, **kwargs):
+        self(ACTION.HEARTBEAT, **kwargs)
+
+    def POS_OPEN(self, **kwargs):
+        self(ACTION.POS_OPEN, **kwargs)
+
+    def POS_MODIFY(self, **kwargs):
+        self(ACTION.POS_MODIFY, **kwargs)
+
+    def POS_CLOSE(self, **kwargs):
+        self(ACTION.POS_CLOSE, **kwargs)
+
+    def POS_CLOSE_PARTIAL(self, **kwargs):
+        self(ACTION.POS_CLOSE_PARTIAL, **kwargs)
+
+    def POS_CLOSE_MAGIC(self, **kwargs):
+        self(ACTION.POS_CLOSE_MAGIC, **kwargs)
+
+    def POS_CLOSE_ALL(self, **kwargs):
+        self(ACTION.POS_CLOSE_ALL, **kwargs)
+
+    def ORD_OPEN(self, **kwargs):
+        self(ACTION.ORD_OPEN, **kwargs)
+
+    def ORD_MODIFY(self, **kwargs):
+        self(ACTION.ORD_MODIFY, **kwargs)
+
+    def ORD_DELETE(self, **kwargs):
+        self(ACTION.ORD_DELETE, **kwargs)
+
+    def ORD_DELETE_ALL(self, **kwargs):
+        self(ACTION.ORD_DELETE_ALL, **kwargs)
+
+    def GET_POSITIONS(self, **kwargs):
+        self(ACTION.GET_POSITIONS, **kwargs)
+
+    def GET_PENDING_ORDERS(self, **kwargs):
+        self(ACTION.GET_PENDING_ORDERS, **kwargs)
+
+    def GET_DATA(self, **kwargs):
+        self(ACTION.GET_DATA, **kwargs)
+
+    def GET_TICK_DATA(self, **kwargs):
+        self(ACTION.GET_TICK_DATA, **kwargs)
+
+    def BUY(self, **kwargs):
+        self(ORDER_TYPE.BUY, **kwargs)
+
+    def SELL(self, **kwargs):
+        self(ORDER_TYPE.SELL, **kwargs)
+
+    def BUY_LIMIT(self, **kwargs):
+        self(ORDER_TYPE.BUY_LIMIT, **kwargs)
+
+    def SELL_LIMIT(self, **kwargs):
+        self(ORDER_TYPE.SELL_LIMIT, **kwargs)
+
+    def BUY_STOP(self, **kwargs):
+        self(ORDER_TYPE.BUY_STOP, **kwargs)
+
+    def SELL_STOP(self, **kwargs):
+        self(ORDER_TYPE.SELL_STOP, **kwargs)
+
+
+class DWX_Connector(TicketTrackerMixin, DirectMethodAccessMixin, DWX_ZeroMQ_Connector):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._most_recent_ticket = None
@@ -32,7 +100,7 @@ class DWX_Connector(TicketTrackerMixin, DWX_ZeroMQ_Connector):
         """Take a command dict produced by `command`, send it to MT5."""
         return self._DWX_MTX_SEND_COMMAND_(**command)
 
-    def send(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         " Functional composition: `send_command ∘ command`"
         cmd = command(*args, **kwargs)
         return self.send_command(cmd)
@@ -117,18 +185,22 @@ def command(action_or_order_type: Union[ACTION, ORDER_TYPE], **kwargs):
     required_dict_keys = _required_dict_keys_by_action(action)
     if "sl" in required_dict_keys:
         if "sl" not in kwargs:
-            # The default sl==0.0 means "no stoploss" for POS_OPEN/ORD_OPEN, and "same
-            # stoploss" for POS_MODIFY/ORD_MODIFY
-            kwargs["sl"] = 0.0
-            if action in [ACTION.ORD_OPEN, ACTION.POS_OPEN]:
+            if action in [ACTION.POS_OPEN, ACTION.ORD_OPEN]:
+                # The default sl==0.0 means "no stoploss"
+                kwargs["sl"] = 0.0
                 warn("We recommend using a stoploss!")
+            elif action in [ACTION.POS_MODIFY, ACTION.ORD_MODIFY]:
+                # The default sl==-1 means "same stoploss"
+                kwargs["sl"] = -1
     if "tp" in required_dict_keys:
         if "tp" not in kwargs:
-            # The default tp==0.0 means "no takeprofit" for POS_OPEN/ORD_OPEN, and "same
-            # takeprofit" for POS_MODIFY/ORD_MODIFY
-            kwargs["tp"] = 0.0
-            if action in [ACTION.ORD_OPEN, ACTION.POS_OPEN]:
+            if action in [ACTION.POS_OPEN, ACTION.ORD_OPEN]:
+                # The default tp==0.0 means "no takeprofit"
+                kwargs["tp"] = 0.0
                 warn("We recommend using a takeprofit!")
+            elif action in [ACTION.POS_MODIFY, ACTION.ORD_MODIFY]:
+                # The default tp==-1 means "same stoploss"
+                kwargs["tp"] = -1
     if "comment" in required_dict_keys:
         if "comment" not in kwargs:
             kwargs["comment"] = ""
