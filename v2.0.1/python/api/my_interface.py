@@ -7,7 +7,35 @@ from typing import Union, Optional
     https://www.mql5.com/en/docs/constants/tradingconstants/orderproperties#enum_order_type
 """
 
-import my_DWX_ZeroMQ_Connector_v1_0 as _DWX_Connector_module_
+from . import my_DWX_ZeroMQ_Connector_v1_0 as _DWX_Connector_module_
+from .my_DWX_ZeroMQ_Connector_v1_0 import DWX_ZeroMQ_Connector
+
+
+class TicketTrackerMixin:
+    """Keep track of the ticket of the most recent order with the `ticket` property."""
+    def _set_response_(self, _resp=None):
+        if isinstance(_resp, dict):
+            if "_ticket" in _resp:
+                self._most_recent_ticket = _resp["_ticket"]
+
+    @property
+    def ticket(self):
+        return self._most_recent_ticket
+
+
+class DWX_Connector(TicketTrackerMixin, DWX_ZeroMQ_Connector):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._most_recent_ticket = None
+
+    def send_command(self, command: dict):
+        """Take a command dict produced by `command`, send it to MT5."""
+        return self._DWX_MTX_SEND_COMMAND_(**command)
+
+    def send(self, *args, **kwargs):
+        " Functional composition: `send_command ∘ command`"
+        cmd = command(*args, **kwargs)
+        return self.send_command(cmd)
 
 
 class ORDER_TYPE(IntEnum):
@@ -23,12 +51,6 @@ class ORDER_TYPE(IntEnum):
     def __str__(self):
         return str(int(self.value))
 
-class DWX_Connector(_DWX_Connector_module_.DWX_ZeroMQ_Connector):
-    def send_command(self, command: dict):
-        return self._DWX_MTX_SEND_COMMAND_(**command)
-    def make_and_send_command(self, *args, **kwargs):
-        cmd = command(*args, **kwargs)
-        return self.send_command(cmd)
 
 # compArray[0] = ACTION
 class ACTION(IntEnum):

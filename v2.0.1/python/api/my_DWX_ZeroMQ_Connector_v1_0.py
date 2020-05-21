@@ -632,7 +632,8 @@ class DWX_ZeroMQ_Connector:
                             try:
                                 _data = eval(msg)
 
-                                self._thread_data_output = _data
+                                # self._thread_data_output = _data
+                                self._set_response_(_data)
                                 if self._verbose:
                                     print(_data)  # default logic
 

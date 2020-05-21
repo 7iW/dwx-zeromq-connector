@@ -1,14 +1,33 @@
-import my_interface
-from my_interface import command, ORDER_TYPE, ACTION
+from . import my_interface
+from .my_interface import command, ORDER_TYPE, ACTION
 import pytest
 from warnings import catch_warnings
 
+class DWX_ZeroMQ_Connector_STUB(my_interface.DWX_Connector):
+    """Like DWX_ZeroMQ_Connector, but without the side effects."""
+    def _create_sockets_and_initialize_poller(self):
+        pass
+    def _start_poller(self):
+        pass
+    def _setup_ZMQ_monitoring(self):
+        pass
+
+def test_ticket_tracking(irrelevant_ticket_number):
+    mt5 = DWX_ZeroMQ_Connector_STUB()
+    assert mt5.ticket is None
+    mt5._set_response_(dict(_ticket=irrelevant_ticket_number))
+    assert mt5.ticket == irrelevant_ticket_number
 
 def test_my_DWX_Connector_wrapper_has_send_command_method():
     assert hasattr(my_interface.DWX_Connector, "send_command")
 
-def test_my_DWX_Connector_wrapper_has_make_and_send_command_method():
-    assert hasattr(my_interface.DWX_Connector, "make_and_send_command")
+def test_my_DWX_Connector_wrapper_has_send_method():
+    assert hasattr(my_interface.DWX_Connector, "send")
+
+
+@pytest.fixture
+def irrelevant_ticket_number():
+    return 9876543210
 
 
 @pytest.fixture
@@ -91,51 +110,6 @@ def test_not_implemented_ACTIONs(action):
         command(action)
 
 
-class DWX_ZeroMQ_Connector_STUB(my_interface.DWX_Connector):
-    """Like DWX_ZeroMQ_Connector, but without the massive __init__ function"""
-
-    def __init__(self, _ClientID="dwx-zeromq"):
-        self._ClientID = _ClientID
-
-    def _format_command_to_send(
-        self,
-        _action=ACTION.POS_OPEN,
-        _type=0,
-        _symbol="EURUSD",
-        _price=0.0,
-        _SL=50,
-        _TP=50,
-        _comment="Python-to-MT",
-        _lots=0.01,
-        _magic=123456,
-        _ticket=0,
-    ):
-        """This method is the first part of _DWX_MTX_SEND_COMMAND_"""
-        _msg = "{};{};{};{};{};{};{};{};{};{}".format(
-            _action, _type, _symbol, _price, _SL, _TP, _comment, _lots, _magic, _ticket
-        )
-        return _msg
-
-
-# def test_comparison_with_DWX_default_order_dict():
-#     dwx_stub = DWX_ZeroMQ_Connector_STUB()
-#     default_order_dict = dwx_stub._generate_default_order_dict()
-#     our_order_dict = command(
-#         ORDER_TYPE(default_order_dict["_type"]),
-#         symbol=default_order_dict["_symbol"],
-#         price=default_order_dict["_price"],
-#         sl=default_order_dict["_SL"],
-#         tp=default_order_dict["_TP"],
-#         comment=default_order_dict["_comment"],
-#         lots=default_order_dict["_lots"],
-#         magic=default_order_dict["_magic"],
-#         ticket=default_order_dict["_ticket"],
-#     )
-#     for key in default_order_dict.keys():
-#         assert default_order_dict[key] == our_order_dict[key]
-#     assert dwx_stub._format_command_to_send(
-#         **default_order_dict
-#     ) == dwx_stub._format_command_to_send(**our_order_dict)
 
 
 def test__used_compArray_indices_by_action():
