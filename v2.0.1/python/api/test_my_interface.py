@@ -1,6 +1,9 @@
+# local
 from . import my_interface
 from .my_interface import command, ORDER_TYPE, ACTION
-import pytest
+# 3rd party
+import pytest  # type: ignore
+# stdlib
 from warnings import catch_warnings
 
 

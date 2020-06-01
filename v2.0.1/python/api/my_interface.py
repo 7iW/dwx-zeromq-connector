@@ -1,5 +1,7 @@
-from warnings import warn
+# stdlib
+import copy
 from enum import IntEnum
+from warnings import warn
 from typing import Union, Optional
 
 """
@@ -14,14 +16,75 @@ from .my_DWX_ZeroMQ_Connector_v1_0 import DWX_ZeroMQ_Connector
 class TicketTrackerMixin:
     """Keep track of the ticket of the most recent order with the `ticket` property."""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert not hasattr(self, "_ticket")
+        self._ticket = None
+
     def _set_response_(self, _resp=None):
         if isinstance(_resp, dict):
             if "_ticket" in _resp:
-                self._most_recent_ticket = _resp["_ticket"]
+                self._ticket = _resp["_ticket"]
+        super()._set_response_(_resp)
 
     @property
     def ticket(self):
-        return self._most_recent_ticket
+        if self._ticket is not None:
+            return self._ticket
+        else:
+            return None
+
+
+class PositionsTrackerMixin:
+    """Keep track of recent positions."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert not hasattr(self, "_positions")
+        self._positions = None
+
+    def _set_response_(self, _resp=None):
+        if isinstance(_resp, dict):
+            if "_positions" in _resp:
+                self._positions = _resp["_positions"]
+        super()._set_response_(_resp)
+
+    @property
+    def positions(self):
+        if self._positions is not None:
+            p = copy.deepcopy(self._positions)
+            for position in p:
+                if "_type" in p[position]:
+                    p[position]["_type"] = ORDER_TYPE(p[position]["_type"])
+            return p
+        else:
+            return None
+
+
+class OrdersTrackerMixin:
+    """Keep track of recent orders."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert not hasattr(self, "_orders")
+        self._orders = None
+
+    def _set_response_(self, _resp=None):
+        if isinstance(_resp, dict):
+            if "_orders" in _resp:
+                self._orders = _resp["_orders"]
+        super()._set_response_(_resp)
+
+    @property
+    def orders(self):
+        if self._orders is not None:
+            p = copy.deepcopy(self._orders)
+            for order in p:
+                if "_type" in p[order]:
+                    p[order]["_type"] = ORDER_TYPE(p[order]["_type"])
+            return p
+        else:
+            return None
 
 
 class DirectMethodAccessMixin:
@@ -91,17 +154,24 @@ class DirectMethodAccessMixin:
         self(ORDER_TYPE.SELL_STOP, **kwargs)
 
 
-class DWX_Connector(TicketTrackerMixin, DirectMethodAccessMixin, DWX_ZeroMQ_Connector):
+class DWX_Connector(
+    TicketTrackerMixin,
+    PositionsTrackerMixin,
+    OrdersTrackerMixin,
+    DirectMethodAccessMixin,
+    DWX_ZeroMQ_Connector,
+):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._most_recent_ticket = None
 
-    def send_command(self, command: dict):
-        """Take a command dict produced by `command`, send it to MT5."""
-        return self._DWX_MTX_SEND_COMMAND_(**command)
+    def send_command(self, cmd: dict):
+        """Take a command dict, send it to MT5."""
+        return self._DWX_MTX_SEND_COMMAND_(**cmd)
 
     def __call__(self, *args, **kwargs):
-        " Functional composition: `send_command ∘ command`"
+        """Functional composition: `send_command ∘ command`.
+           Here `command` refers to the function defined later in this module.
+        """
         cmd = command(*args, **kwargs)
         return self.send_command(cmd)
 
