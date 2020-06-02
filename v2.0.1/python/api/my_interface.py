@@ -46,19 +46,15 @@ class PositionsTrackerMixin:
     def _set_response_(self, _resp=None):
         if isinstance(_resp, dict):
             if "_positions" in _resp:
-                self._positions = _resp["_positions"]
+                self._positions = ps = copy.deepcopy(_resp["_positions"])
+                for position in ps:
+                    if "_type" in ps[position]:
+                        ps[position]["_type"] = ORDER_TYPE(ps[position]["_type"])
         super()._set_response_(_resp)
 
     @property
     def positions(self):
-        if self._positions is not None:
-            p = copy.deepcopy(self._positions)
-            for position in p:
-                if "_type" in p[position]:
-                    p[position]["_type"] = ORDER_TYPE(p[position]["_type"])
-            return p
-        else:
-            return None
+        return self._positions
 
 
 class OrdersTrackerMixin:
@@ -91,68 +87,73 @@ class DirectMethodAccessMixin:
     """We want to be able to access ACTIONs and ORDER_TYPEs via methods."""
 
     def HEARTBEAT(self, **kwargs):
-        self(ACTION.HEARTBEAT, **kwargs)
+        return self(ACTION.HEARTBEAT, **kwargs)
 
     def POS_OPEN(self, **kwargs):
-        self(ACTION.POS_OPEN, **kwargs)
+        return self(ACTION.POS_OPEN, **kwargs)
 
     def POS_MODIFY(self, **kwargs):
-        self(ACTION.POS_MODIFY, **kwargs)
+        return self(ACTION.POS_MODIFY, **kwargs)
 
     def POS_CLOSE(self, **kwargs):
-        self(ACTION.POS_CLOSE, **kwargs)
+        return self(ACTION.POS_CLOSE, **kwargs)
 
     def POS_CLOSE_PARTIAL(self, **kwargs):
-        self(ACTION.POS_CLOSE_PARTIAL, **kwargs)
+        return self(ACTION.POS_CLOSE_PARTIAL, **kwargs)
 
     def POS_CLOSE_MAGIC(self, **kwargs):
-        self(ACTION.POS_CLOSE_MAGIC, **kwargs)
+        return self(ACTION.POS_CLOSE_MAGIC, **kwargs)
 
     def POS_CLOSE_ALL(self, **kwargs):
-        self(ACTION.POS_CLOSE_ALL, **kwargs)
+        return self(ACTION.POS_CLOSE_ALL, **kwargs)
 
     def ORD_OPEN(self, **kwargs):
-        self(ACTION.ORD_OPEN, **kwargs)
+        return self(ACTION.ORD_OPEN, **kwargs)
 
     def ORD_MODIFY(self, **kwargs):
-        self(ACTION.ORD_MODIFY, **kwargs)
+        return self(ACTION.ORD_MODIFY, **kwargs)
 
     def ORD_DELETE(self, **kwargs):
-        self(ACTION.ORD_DELETE, **kwargs)
+        return self(ACTION.ORD_DELETE, **kwargs)
 
     def ORD_DELETE_ALL(self, **kwargs):
-        self(ACTION.ORD_DELETE_ALL, **kwargs)
+        return self(ACTION.ORD_DELETE_ALL, **kwargs)
 
     def GET_POSITIONS(self, **kwargs):
-        self(ACTION.GET_POSITIONS, **kwargs)
+        return self(ACTION.GET_POSITIONS, **kwargs)
 
     def GET_PENDING_ORDERS(self, **kwargs):
-        self(ACTION.GET_PENDING_ORDERS, **kwargs)
+        return self(ACTION.GET_PENDING_ORDERS, **kwargs)
 
     def GET_DATA(self, **kwargs):
-        self(ACTION.GET_DATA, **kwargs)
+        return self(ACTION.GET_DATA, **kwargs)
 
     def GET_TICK_DATA(self, **kwargs):
-        self(ACTION.GET_TICK_DATA, **kwargs)
+        return self(ACTION.GET_TICK_DATA, **kwargs)
 
     def BUY(self, **kwargs):
-        self(ORDER_TYPE.BUY, **kwargs)
+        return self(ORDER_TYPE.BUY, **kwargs)
 
     def SELL(self, **kwargs):
-        self(ORDER_TYPE.SELL, **kwargs)
+        return self(ORDER_TYPE.SELL, **kwargs)
 
     def BUY_LIMIT(self, **kwargs):
-        self(ORDER_TYPE.BUY_LIMIT, **kwargs)
+        return self(ORDER_TYPE.BUY_LIMIT, **kwargs)
 
     def SELL_LIMIT(self, **kwargs):
-        self(ORDER_TYPE.SELL_LIMIT, **kwargs)
+        return self(ORDER_TYPE.SELL_LIMIT, **kwargs)
 
     def BUY_STOP(self, **kwargs):
-        self(ORDER_TYPE.BUY_STOP, **kwargs)
+        return self(ORDER_TYPE.BUY_STOP, **kwargs)
 
     def SELL_STOP(self, **kwargs):
-        self(ORDER_TYPE.SELL_STOP, **kwargs)
+        return self(ORDER_TYPE.SELL_STOP, **kwargs)
 
+class CommandGenerator(DirectMethodAccessMixin):
+    """Just a class that can be used to generate command dicts to be passed to mt5"""
+    def __call__(self, *args, **kwargs):
+        cmd = command(*args, **kwargs)
+        return cmd
 
 class DWX_Connector(
     TicketTrackerMixin,
