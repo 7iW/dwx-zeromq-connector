@@ -15,13 +15,13 @@
     https://opensource.org/licenses/BSD-3-Clause
 """
 
-import zmq
+import zmq  # type: ignore
 from time import sleep
-from pandas import DataFrame, Timestamp
+from pandas import DataFrame, Timestamp  # type: ignore
 from threading import Thread
 
 # 30-07-2019 10:58 CEST
-from zmq.utils.monitor import recv_monitor_message
+from zmq.utils.monitor import recv_monitor_message  # type: ignore
 
 # ENUM_DWX_SERV_ACTION
 # NOTE: There is not too many actions and all could be replaced
