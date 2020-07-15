@@ -561,7 +561,7 @@ class DWX_ZeroMQ_Connector:
         _lots=0.01,
         _magic=123456,
         _ticket=0,
-    ):
+    ) -> None:
 
         _msg = "{};{};{};{};{};{};{};{};{};{}".format(
             _action, _type, _symbol, _price, _SL, _TP, _comment, _lots, _magic, _ticket
@@ -599,7 +599,6 @@ class DWX_ZeroMQ_Connector:
          compArray[8] = Magic Number
          compArray[9] = Ticket Number (MODIFY/CLOSE)
          """
-        # pass
 
     ##########################################################################
 

@@ -2,7 +2,8 @@
 import copy
 from enum import IntEnum
 from warnings import warn
-from typing import Union, Optional
+from typing import Union, Optional, NewType, Dict, List
+from abc import ABC, abstractmethod
 
 """
     ORDER TYPES: 
@@ -13,7 +14,45 @@ from . import my_DWX_ZeroMQ_Connector_v1_0 as _DWX_Connector_module_
 from .my_DWX_ZeroMQ_Connector_v1_0 import DWX_ZeroMQ_Connector
 
 
-class TicketTrackerMixin:
+class ORDER_TYPE(IntEnum):
+    """Taken from DWX_ZeroMQ_Connector_v1_0.py"""
+
+    BUY = 0
+    SELL = 1
+    BUY_LIMIT = 2
+    SELL_LIMIT = 3
+    BUY_STOP = 4
+    SELL_STOP = 5
+
+    def __str__(self):
+        return str(int(self.value))
+
+
+# compArray[0] = ACTION
+class ACTION(IntEnum):
+    """Taken from DWX_ZeroMQ_Connector_v1_0.py"""
+
+    HEARTBEAT = _DWX_Connector_module_.HEARTBEAT
+    POS_OPEN = _DWX_Connector_module_.POS_OPEN
+    POS_MODIFY = _DWX_Connector_module_.POS_MODIFY
+    POS_CLOSE = _DWX_Connector_module_.POS_CLOSE
+    POS_CLOSE_PARTIAL = _DWX_Connector_module_.POS_CLOSE_PARTIAL
+    POS_CLOSE_MAGIC = _DWX_Connector_module_.POS_CLOSE_MAGIC
+    POS_CLOSE_ALL = _DWX_Connector_module_.POS_CLOSE_ALL
+    ORD_OPEN = _DWX_Connector_module_.ORD_OPEN
+    ORD_MODIFY = _DWX_Connector_module_.ORD_MODIFY
+    ORD_DELETE = _DWX_Connector_module_.ORD_DELETE
+    ORD_DELETE_ALL = _DWX_Connector_module_.ORD_DELETE_ALL
+    GET_POSITIONS = _DWX_Connector_module_.GET_POSITIONS
+    GET_PENDING_ORDERS = _DWX_Connector_module_.GET_PENDING_ORDERS
+    GET_DATA = _DWX_Connector_module_.GET_DATA
+    GET_TICK_DATA = _DWX_Connector_module_.GET_TICK_DATA
+
+    def __str__(self):
+        return str(int(self.value))
+
+
+class TicketTrackerMixin(DWX_ZeroMQ_Connector):
     """Keep track of the ticket of the most recent order with the `ticket` property."""
 
     def __init__(self, *args, **kwargs):
@@ -35,7 +74,7 @@ class TicketTrackerMixin:
             return None
 
 
-class PositionsTrackerMixin:
+class PositionsTrackerMixin(DWX_ZeroMQ_Connector):
     """Keep track of recent positions."""
 
     def __init__(self, *args, **kwargs):
@@ -57,7 +96,7 @@ class PositionsTrackerMixin:
         return self._positions
 
 
-class OrdersTrackerMixin:
+class OrdersTrackerMixin(DWX_ZeroMQ_Connector):
     """Keep track of recent orders."""
 
     def __init__(self, *args, **kwargs):
@@ -83,8 +122,11 @@ class OrdersTrackerMixin:
             return None
 
 
-class DirectMethodAccessMixin:
+class DirectMethodAccessMixin(ABC):
     """We want to be able to access ACTIONs and ORDER_TYPEs via methods."""
+    @abstractmethod
+    def __call__(self, action_or_order_type: Union[ACTION, ORDER_TYPE], **kwargs):
+        ...
 
     def HEARTBEAT(self, **kwargs):
         return self(ACTION.HEARTBEAT, **kwargs)
@@ -149,10 +191,12 @@ class DirectMethodAccessMixin:
     def SELL_STOP(self, **kwargs):
         return self(ORDER_TYPE.SELL_STOP, **kwargs)
 
+Command = NewType("Command", Dict)
+
 class CommandGenerator(DirectMethodAccessMixin):
     """Just a class that can be used to generate command dicts to be passed to mt5"""
-    def __call__(self, *args, **kwargs):
-        cmd = command(*args, **kwargs)
+    def __call__(self, *args, **kwargs) -> Command:
+        cmd: Command = command(*args, **kwargs)
         return cmd
 
 class DWX_Connector(
@@ -165,9 +209,9 @@ class DWX_Connector(
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def send_command(self, cmd: dict):
+    def send_command(self, cmd: Command):
         """Take a command dict, send it to MT5."""
-        return self._DWX_MTX_SEND_COMMAND_(**cmd)
+        self._DWX_MTX_SEND_COMMAND_(**cmd)
 
     def __call__(self, *args, **kwargs):
         """Functional composition: `send_command ∘ command`.
@@ -176,46 +220,7 @@ class DWX_Connector(
         cmd = command(*args, **kwargs)
         return self.send_command(cmd)
 
-
-class ORDER_TYPE(IntEnum):
-    """Taken from DWX_ZeroMQ_Connector_v1_0.py"""
-
-    BUY = 0
-    SELL = 1
-    BUY_LIMIT = 2
-    SELL_LIMIT = 3
-    BUY_STOP = 4
-    SELL_STOP = 5
-
-    def __str__(self):
-        return str(int(self.value))
-
-
-# compArray[0] = ACTION
-class ACTION(IntEnum):
-    """Taken from DWX_ZeroMQ_Connector_v1_0.py"""
-
-    HEARTBEAT = _DWX_Connector_module_.HEARTBEAT
-    POS_OPEN = _DWX_Connector_module_.POS_OPEN
-    POS_MODIFY = _DWX_Connector_module_.POS_MODIFY
-    POS_CLOSE = _DWX_Connector_module_.POS_CLOSE
-    POS_CLOSE_PARTIAL = _DWX_Connector_module_.POS_CLOSE_PARTIAL
-    POS_CLOSE_MAGIC = _DWX_Connector_module_.POS_CLOSE_MAGIC
-    POS_CLOSE_ALL = _DWX_Connector_module_.POS_CLOSE_ALL
-    ORD_OPEN = _DWX_Connector_module_.ORD_OPEN
-    ORD_MODIFY = _DWX_Connector_module_.ORD_MODIFY
-    ORD_DELETE = _DWX_Connector_module_.ORD_DELETE
-    ORD_DELETE_ALL = _DWX_Connector_module_.ORD_DELETE_ALL
-    GET_POSITIONS = _DWX_Connector_module_.GET_POSITIONS
-    GET_PENDING_ORDERS = _DWX_Connector_module_.GET_PENDING_ORDERS
-    GET_DATA = _DWX_Connector_module_.GET_DATA
-    GET_TICK_DATA = _DWX_Connector_module_.GET_TICK_DATA
-
-    def __str__(self):
-        return str(int(self.value))
-
-
-def command(action_or_order_type: Union[ACTION, ORDER_TYPE], **kwargs):
+def command(action_or_order_type: Union[ACTION, ORDER_TYPE], **kwargs) -> Command:
     assert "type" not in kwargs, "Passing 'type' as a keyword arg is not supported."
     assert "action" not in kwargs, "Passing 'action' as a keyword arg is not supported."
     # Process the positional argument
@@ -293,7 +298,7 @@ def command(action_or_order_type: Union[ACTION, ORDER_TYPE], **kwargs):
                     key, repr(action)
                 )
             )
-    return {
+    return Command({
         "_action": kwargs[
             "action"
         ],  # '_action' is the only key that's always required.
@@ -306,7 +311,7 @@ def command(action_or_order_type: Union[ACTION, ORDER_TYPE], **kwargs):
         "_lots": kwargs.get("lots", ""),
         "_magic": kwargs.get("magic", ""),
         "_ticket": kwargs.get("ticket", ""),
-    }
+    })
 
 
 def _required_dict_keys_by_action(action):
@@ -329,7 +334,7 @@ def _required_dict_keys_by_action(action):
 
 
 # TODO: once python 3.9 comes out with the frozenmap feature, change this to a frozenmap.
-_used_compArray_indices_by_action = {
+_used_compArray_indices_by_action: Dict[ACTION, List[int]] = {
     ACTION.HEARTBEAT: [0,],
     #          case HEARTBEAT:
     ACTION.POS_OPEN: [0, 2, 1, 7, 3, 4, 5, 6, 8,],
@@ -383,10 +388,10 @@ _used_compArray_indices_by_action = {
     # case GET_POSITIONS:
     ACTION.GET_PENDING_ORDERS: [0,],
     # case GET_PENDING_ORDERS:
-    ACTION.GET_DATA: NotImplementedError,
+    ACTION.GET_DATA: NotImplementedError,  # type: ignore
     # case GET_DATA:
     #    ACTION.compArray
-    ACTION.GET_TICK_DATA: NotImplementedError,
+    ACTION.GET_TICK_DATA: NotImplementedError,  # type: ignore
     # case GET_TICK_DATA:
     #    ACTION.compArray
 }
