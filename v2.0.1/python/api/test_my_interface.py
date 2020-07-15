@@ -154,7 +154,7 @@ def test_limit_orders(
 
 def test_command_fails_on_non_ORDER_TYPE(irrelevant_symbol, irrelevant_lots):
     with pytest.raises(RuntimeError):
-        command(0, symbol=irrelevant_symbol, lots=irrelevant_lots)
+        command(0, symbol=irrelevant_symbol, lots=irrelevant_lots)  # type: ignore
 
 
 @pytest.mark.parametrize("action", [ACTION.GET_DATA, ACTION.GET_TICK_DATA])
@@ -181,26 +181,26 @@ def test__used_compArray_indices_by_action():
 def test_POS_OPEN_price_defaults_to_0(irrelevant_symbol, irrelevant_lots):
     kwargs = dict(symbol=irrelevant_symbol, lots=irrelevant_lots)
 
-    with catch_warnings(record=True) as w:
+    with catch_warnings(record=True) as _warnings:
         d = command(ORDER_TYPE.BUY, price=123, **kwargs)
         assert d["_price"] == 123
-        assert len(w) == 3
+        assert len(_warnings) == 3
         assert (
-            str(w[0].message)
+            str(_warnings[0].message)
             == "We recommend using the default price==0 to execute at mkt price."
         )
-        assert str(w[1].message) == "We recommend using a stoploss!"
-        assert str(w[2].message) == "We recommend using a takeprofit!"
+        assert str(_warnings[1].message) == "We recommend using a stoploss!"
+        assert str(_warnings[2].message) == "We recommend using a takeprofit!"
 
     # price==0 warning goes away
-    with catch_warnings(record=True) as w:
+    with catch_warnings(record=True) as _warnings:
         d = command(ORDER_TYPE.BUY, price=0, **kwargs)
-        assert len(w) == 2
+        assert len(_warnings) == 2
     assert d["_price"] == 0.0
     # price==0 warning goes away
-    with catch_warnings(record=True) as w:
+    with catch_warnings(record=True) as _warnings:
         d = command(ORDER_TYPE.BUY, **kwargs)
-        assert len(w) == 2
+        assert len(_warnings) == 2
     assert d["_price"] == 0.0
 
 
