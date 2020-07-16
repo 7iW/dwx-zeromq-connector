@@ -1282,21 +1282,40 @@ void DWX_GetOpenPositions(string &zmq_ret)
         {
          string _symbol = PositionGetSymbol(i);
          double points_per_tick  = SymbolInfoDouble(_symbol, SYMBOL_TRADE_TICK_SIZE);
+
+         // _t prefix means units of ticks. We convert double->int->string
+
+         // _t_open_price
+         double _t_open_price_double = PositionGetDouble(POSITION_PRICE_OPEN)/points_per_tick;
+         int _t_open_price = round(_t_open_price_double);
+         assert(_t_open_price == _t_open_price_double, "expected " + (string)_t_open_price + " == " + (string)_t_open_price_double);
+         string _t_open_price_string = IntegerToString(_t_open_price);
+
+         // _t_SL
+         double _t_SL_double = PositionGetDouble(POSITION_SL)/points_per_tick;
+         int _t_SL = round(_t_SL_double);
+         assert(_t_SL == _t_SL_double, "expected " + (string)_t_SL + " == " + (string)_t_SL_double);
+         string _t_SL_string = IntegerToString(_t_SL);
+
+         // _t_TP
+         double _t_TP_double = PositionGetDouble(POSITION_TP)/points_per_tick;
+         int _t_TP = round(_t_TP_double);
+         assert(_t_TP == _t_TP_double, "expected " + (string)_t_TP + " == " + (string)_t_TP_double);
+         string _t_TP_string = IntegerToString(_t_TP);
+
          zmq_ret+=IntegerToString(_ticket)+": {";
-         // zmq_ret+=IntegerToString(PositionGetInteger(POSITION_TICKET))+": {";
 
          zmq_ret+="'_magic': "+IntegerToString(PositionGetInteger(POSITION_MAGIC))+","
-                  // +" '_symbol': '"+PositionGetString(POSITION_SYMBOL)+"',"
                   +" '_symbol': '"+_symbol+"',"
                   +"'_lots': "+DoubleToString(PositionGetDouble(POSITION_VOLUME))+","
                   +"'_type': "+IntegerToString(PositionGetInteger(POSITION_TYPE))+","
                   +"'_open_price': "+DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN))+","
-                  +"'_open_price': "+DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN)/points_per_tick)+","  // in ticks, should be a whole number
+                  +"'_t_open_price': "+_t_open_price_string+","  // in ticks
                   +"'_open_time': '"+TimeToString(PositionGetInteger(POSITION_TIME),TIME_DATE|TIME_SECONDS)+"',"
                   +"'_SL': "+DoubleToString(PositionGetDouble(POSITION_SL))+","
-                  +"'_t_SL': "+DoubleToString(PositionGetDouble(POSITION_SL)/points_per_tick)+","  // in ticks, should be a whole number
+                  +"'_t_SL': "+_t_SL_string+","  // in ticks
                   +"'_TP': "+DoubleToString(PositionGetDouble(POSITION_TP))+","
-                  +"'_t_TP': "+DoubleToString(PositionGetDouble(POSITION_TP)/points_per_tick)+","  // in ticks, should be a whole number
+                  +"'_t_TP': "+_t_TP_string+","  // in ticks
                   +"'_pnl': "+DoubleToString(PositionGetDouble(POSITION_PROFIT))+", '_comment': '"+PositionGetString(POSITION_COMMENT)+"',";
 
          zmq_ret+="},";
@@ -1322,19 +1341,39 @@ void DWX_GetPendingOrders(string &zmq_ret)
         {
          string _symbol = OrderGetString(ORDER_SYMBOL);
          double points_per_tick  = SymbolInfoDouble(_symbol, SYMBOL_TRADE_TICK_SIZE);
+
+         // _t prefix means units of ticks. We convert double->int->string
+
+         // _t_open_price
+         double _t_open_price_double = OrderGetDouble(ORDER_PRICE_OPEN)/points_per_tick;
+         int _t_open_price = round(_t_open_price_double);
+         assert(_t_open_price == _t_open_price_double, "expected " + (string)_t_open_price + " == " + (string)_t_open_price_double);
+         string _t_open_price_string = IntegerToString(_t_open_price);
+
+         // _t_SL
+         double _t_SL_double = OrderGetDouble(ORDER_SL)/points_per_tick;
+         int _t_SL = round(_t_SL_double);
+         assert(_t_SL == _t_SL_double, "expected " + (string)_t_SL + " == " + (string)_t_SL_double);
+         string _t_SL_string = IntegerToString(_t_SL);
+
+         // _t_TP
+         double _t_TP_double = OrderGetDouble(ORDER_TP)/points_per_tick;
+         int _t_TP = round(_t_TP_double);
+         assert(_t_TP == _t_TP_double, "expected " + (string)_t_TP + " == " + (string)_t_TP_double);
+         string _t_TP_string = IntegerToString(_t_TP);
+
          zmq_ret+=IntegerToString(OrderGetInteger(ORDER_TICKET))+": {";
 
          zmq_ret+="'_magic': "+IntegerToString(OrderGetInteger(ORDER_MAGIC))+","
-                  +"'_symbol': '"+OrderGetString(ORDER_SYMBOL)+"',"
+                  +"'_symbol': '"+_symbol+"',"
                   +"'_lots': "+DoubleToString(OrderGetDouble(ORDER_VOLUME_CURRENT))+","
                   +"'_type': "+IntegerToString(OrderGetInteger(ORDER_TYPE))+","
                   +"'_open_price': "+DoubleToString(OrderGetDouble(ORDER_PRICE_OPEN))+","
-                  // +"'_t_open_price': "+DoubleToString(OrderGetDouble(ORDER_PRICE_OPEN)/points_per_tick)+","  // in ticks, should be a whole number
-                  +"'_t_open_price': "+IntegerToString(round(OrderGetDouble(ORDER_PRICE_OPEN)/points_per_tick))+","  // in ticks, should be a whole number
+                  +"'_t_open_price': "+_t_open_price_string+","  // in ticks
                   +"'_SL': "+DoubleToString(OrderGetDouble(ORDER_SL))+","
-                  +"'_t_SL': "+DoubleToString(OrderGetDouble(ORDER_SL)/points_per_tick)+","  // in ticks, should be a whole number
+                  +"'_t_SL': "+_t_SL_string+","  // in ticks
                   +"'_TP': "+DoubleToString(OrderGetDouble(ORDER_TP))+","
-                  +"'_t_TP': "+DoubleToString(OrderGetDouble(ORDER_TP)/points_per_tick)+","  // in ticks, should be a whole number
+                  +"'_t_TP': "+_t_TP_string+","  // in ticks
                   +"'_comment': '"+OrderGetString(ORDER_COMMENT)+"',";
 
          zmq_ret+="},";
