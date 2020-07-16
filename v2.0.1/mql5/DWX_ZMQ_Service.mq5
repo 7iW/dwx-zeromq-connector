@@ -24,6 +24,23 @@
 #property link      "https://www.darwinex.com/"
 #property version   "1.0.0"
 
+// The following assert macro taken from https://www.mql5.com/en/articles/1977
+#define assert(condition, message) \
+   if(!(condition)) \
+     { \
+      string fullMessage= \
+                         #condition+", " \
+                         +__FILE__+", " \
+                         +__FUNCSIG__+", " \
+                         +"line: "+(string)__LINE__ \
+                         +(message=="" ? "" : ", "+message); \
+      \
+      Alert("Assertion failed! "+fullMessage); \
+      double x[]; \
+      ArrayResize(x, 0); \
+      x[1] = 0.0; \
+     }
+
 // Required: MQL-ZMQ from https://github.com/dingmaotu/mql-zmq
 #include <Zmq/Zmq.mqh>
 // Transactions helper class From Standard Library
@@ -1312,7 +1329,8 @@ void DWX_GetPendingOrders(string &zmq_ret)
                   +"'_lots': "+DoubleToString(OrderGetDouble(ORDER_VOLUME_CURRENT))+","
                   +"'_type': "+IntegerToString(OrderGetInteger(ORDER_TYPE))+","
                   +"'_open_price': "+DoubleToString(OrderGetDouble(ORDER_PRICE_OPEN))+","
-                  +"'_t_open_price': "+DoubleToString(OrderGetDouble(ORDER_PRICE_OPEN)/points_per_tick)+","  // in ticks, should be a whole number
+                  // +"'_t_open_price': "+DoubleToString(OrderGetDouble(ORDER_PRICE_OPEN)/points_per_tick)+","  // in ticks, should be a whole number
+                  +"'_t_open_price': "+IntegerToString(round(OrderGetDouble(ORDER_PRICE_OPEN)/points_per_tick))+","  // in ticks, should be a whole number
                   +"'_SL': "+DoubleToString(OrderGetDouble(ORDER_SL))+","
                   +"'_t_SL': "+DoubleToString(OrderGetDouble(ORDER_SL)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_TP': "+DoubleToString(OrderGetDouble(ORDER_TP))+","
