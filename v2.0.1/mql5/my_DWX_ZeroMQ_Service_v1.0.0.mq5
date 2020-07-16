@@ -806,7 +806,7 @@ int DWX_OrderOpen(string _symbol,int _type,double _lots,double _price_in_ticks,d
    zmq_ret+="'_action': 'EXECUTION',";
 
 // Pending order valid types: ORDER_TYPE_BUY_LIMIT(2) | ORDER_TYPE_SELL_LIMIT(3) | ORDER_TYPE_BUY_STOP(4) | ORDER_TYPE_SELL_STOP(5).
-// Also: ORDER_TYPE_BUY_STOP_LIMIT and ORDER_TYPE_SELL_STOP_LIMIT, but we leave it out int this Service version.
+// Also: ORDER_TYPE_BUY_STOP_LIMIT and ORDER_TYPE_SELL_STOP_LIMIT, but we leave it out in this Service version.
    if(_type<2 || _type>5)
      {
       zmq_ret+="'_response': 'ACTION_TYPE_ERROR', 'response_value': 'INVALID_PENDING_ORDER_TYPE',";
