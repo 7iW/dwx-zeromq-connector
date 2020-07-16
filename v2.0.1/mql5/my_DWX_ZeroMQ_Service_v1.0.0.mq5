@@ -713,9 +713,8 @@ int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price_in_tick
 
    string valid_symbol=(_symbol=="NULL")?Symbol():_symbol;
 
-//double vpoint  = SymbolInfoDouble(valid_symbol, SYMBOL_POINT);
-   double vtick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE); // units of point/tick
-   Debug("Symbol "+valid_symbol+" tick == "+(string)vtick)
+   double points_per_tick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE);
+   Debug("Symbol "+valid_symbol+" tick == "+(string)points_per_tick)
    int    vdigits = (int)SymbolInfoInteger(valid_symbol, SYMBOL_DIGITS);
 
    double sl = 0.0;
@@ -724,7 +723,7 @@ int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price_in_tick
    double symbol_bid=SymbolInfoDouble(valid_symbol,SYMBOL_BID);
    double symbol_ask=SymbolInfoDouble(valid_symbol,SYMBOL_ASK);
    
-   double _price = _price_in_ticks * vtick;  // Translate ticks into points
+   double _price = _price_in_ticks * points_per_tick;  // Translate ticks into points
 
 
 // IMPORTANT NOTE: Single-Step stops placing for market orders: no more 2-step procedure for STP|ECN|DMA
@@ -732,20 +731,16 @@ int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price_in_tick
    if((ENUM_ORDER_TYPE)_type==ORDER_TYPE_BUY)
      {
       if(_SL!=0.0)
-         // sl=NormalizeDouble(symbol_bid-_SL*vpoint,vdigits);
-         sl=NormalizeDouble(symbol_bid-_SL*vtick,vdigits);
+         sl=NormalizeDouble(symbol_bid-_SL*points_per_tick,vdigits);
       if(_TP!=0.0)
-         // tp=NormalizeDouble(symbol_bid+_TP*vpoint,vdigits);
-         tp=NormalizeDouble(symbol_bid+_TP*vtick,vdigits);
+         tp=NormalizeDouble(symbol_bid+_TP*points_per_tick,vdigits);
      }
    else
      {
       if(_SL!=0.0)
-         // sl=NormalizeDouble(symbol_ask+_SL*vpoint,vdigits);
-         sl=NormalizeDouble(symbol_ask+_SL*vtick,vdigits);
+         sl=NormalizeDouble(symbol_ask+_SL*points_per_tick,vdigits);
       if(_TP!=0.0)
-         // tp=NormalizeDouble(symbol_ask-_TP*vpoint,vdigits);
-         tp=NormalizeDouble(symbol_ask-_TP*vtick,vdigits);
+         tp=NormalizeDouble(symbol_ask-_TP*points_per_tick,vdigits);
      }
 
 // Using helper object to perform transaction.
@@ -821,33 +816,28 @@ int DWX_OrderOpen(string _symbol,int _type,double _lots,double _price_in_ticks,d
 
    string valid_symbol=(_symbol=="NULL")?Symbol():_symbol;
 
-//double vpoint  = SymbolInfoDouble(valid_symbol, SYMBOL_POINT);
-   double vtick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE); // units of point/tick
-   Debug("Symbol "+valid_symbol+" tick == "+(string)vtick)
+   double points_per_tick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE);
+   Debug("Symbol "+valid_symbol+" tick == "+(string)points_per_tick)
    int    vdigits = (int)SymbolInfoInteger(valid_symbol, SYMBOL_DIGITS);
 
    double sl = 0.0;
    double tp = 0.0;
    
-   double _price = _price_in_ticks * vtick;  // Translate ticks into points
+   double _price = _price_in_ticks * points_per_tick;  // Translate ticks into points
 
    if((ENUM_ORDER_TYPE)_type==ORDER_TYPE_BUY_LIMIT || (ENUM_ORDER_TYPE)_type==ORDER_TYPE_BUY_STOP)
      {
       if(_SL!=0.0)
-         // sl=NormalizeDouble(_price-_SL*vpoint,vdigits);
-         sl=NormalizeDouble(_price-_SL*vtick,vdigits);
+         sl=NormalizeDouble(_price-_SL*points_per_tick,vdigits);
       if(_TP!=0.0)
-         // tp=NormalizeDouble(_price+_TP*vpoint,vdigits);
-         tp=NormalizeDouble(_price+_TP*vtick,vdigits);
+         tp=NormalizeDouble(_price+_TP*points_per_tick,vdigits);
      }
    else
      {
       if(_SL!=0.0)
-         // sl=NormalizeDouble(_price+_SL*vpoint,vdigits);
-         sl=NormalizeDouble(_price+_SL*vtick,vdigits);
+         sl=NormalizeDouble(_price+_SL*points_per_tick,vdigits);
       if(_TP!=0.0)
-         // tp=NormalizeDouble(_price-_TP*vpoint,vdigits);
-         tp=NormalizeDouble(_price-_TP*vtick,vdigits);
+         tp=NormalizeDouble(_price-_TP*points_per_tick,vdigits);
      }
 
    if(!tradeHelper.OrderOpen(valid_symbol,(ENUM_ORDER_TYPE)_type,_lots,0,_price,sl,tp,0,0,_comment))
@@ -899,9 +889,8 @@ bool DWX_PositionModify(int ticket,double _SL,double _TP,string &zmq_ret)
          dir_flag=1;
 
       string symbol = PositionGetString(POSITION_SYMBOL);
-      //double vpoint  = SymbolInfoDouble(symbol, SYMBOL_POINT);
-      double vtick  = SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_SIZE);
-      Debug("Symbol "+symbol+" tick == "+(string)vtick)
+      double points_per_tick  = SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_SIZE);
+      Debug("Symbol "+symbol+" tick == "+(string)points_per_tick)
       int    vdigits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
 
       //If it is necessary we can remove stops.
@@ -910,8 +899,7 @@ bool DWX_PositionModify(int ticket,double _SL,double _TP,string &zmq_ret)
       //To update|set stops
       if(_SL>0.0)
         {
-         // sl=NormalizeDouble(PositionGetDouble(POSITION_PRICE_OPEN)-_SL*dir_flag*vpoint,vdigits);
-         sl=NormalizeDouble(PositionGetDouble(POSITION_PRICE_OPEN)-_SL*dir_flag*vtick,vdigits);
+         sl=NormalizeDouble(PositionGetDouble(POSITION_PRICE_OPEN)-_SL*dir_flag*points_per_tick,vdigits);
         }
       if(_SL<0.0) // _SL < 0 means "Use the same SL"
         {
@@ -919,8 +907,7 @@ bool DWX_PositionModify(int ticket,double _SL,double _TP,string &zmq_ret)
         }
       if(_TP>0.0)
         {
-         // tp=NormalizeDouble(PositionGetDouble(POSITION_PRICE_OPEN)+_TP*dir_flag*vpoint,vdigits);
-         tp=NormalizeDouble(PositionGetDouble(POSITION_PRICE_OPEN)+_TP*dir_flag*vtick,vdigits);
+         tp=NormalizeDouble(PositionGetDouble(POSITION_PRICE_OPEN)+_TP*dir_flag*points_per_tick,vdigits);
         }
       if(_TP<0) // _TP < 0 means "Use the same TP"
         {
@@ -967,9 +954,8 @@ bool DWX_OrderModify(int ticket,double _SL,double _TP,string &zmq_ret)
          dir_flag=1;
 
       string symbol = orderHelper.Symbol();
-      //double vpoint  = SymbolInfoDouble(symbol, SYMBOL_POINT);
-      double vtick  = SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_SIZE);
-      Debug("Symbol "+symbol+" tick == "+(string)vtick)
+      double points_per_tick  = SymbolInfoDouble(symbol, SYMBOL_TRADE_TICK_SIZE);
+      Debug("Symbol "+symbol+" tick == "+(string)points_per_tick)
       int    vdigits = (int)SymbolInfoInteger(symbol, SYMBOL_DIGITS);
 
       // To remove stops if necessary.
@@ -979,9 +965,7 @@ bool DWX_OrderModify(int ticket,double _SL,double _TP,string &zmq_ret)
       double price_open = orderHelper.PriceOpen();
       if(_SL>0.0)
         {
-         // sl=NormalizeDouble(OrderGetDouble(ORDER_PRICE_OPEN)-_SL*dir_flag*vpoint,vdigits);
-         // sl=NormalizeDouble(OrderGetDouble(ORDER_PRICE_OPEN)-_SL*dir_flag*vtick,vdigits);
-         sl=NormalizeDouble(price_open-_SL*dir_flag*vtick,vdigits);
+         sl=NormalizeDouble(price_open-_SL*dir_flag*points_per_tick,vdigits);
         }
       if(_SL<0.0) // _SL < 0 means "Use the same SL"
         {
@@ -989,9 +973,7 @@ bool DWX_OrderModify(int ticket,double _SL,double _TP,string &zmq_ret)
         }
       if(_TP>0.0)
         {
-         // tp=NormalizeDouble(OrderGetDouble(ORDER_PRICE_OPEN)+_TP*dir_flag*vpoint,vdigits);
-         // tp=NormalizeDouble(OrderGetDouble(ORDER_PRICE_OPEN)+_TP*dir_flag*vtick,vdigits);
-         tp=NormalizeDouble(price_open+_TP*dir_flag*vtick,vdigits);
+         tp=NormalizeDouble(price_open+_TP*dir_flag*points_per_tick,vdigits);
         }
       if(_TP<0) // _TP < 0 means "Use the same TP"
         {
@@ -1282,7 +1264,7 @@ void DWX_GetOpenPositions(string &zmq_ret)
       if(_ticket>0)
         {
          string _symbol = PositionGetSymbol(i);
-         double vtick  = SymbolInfoDouble(_symbol, SYMBOL_TRADE_TICK_SIZE);
+         double points_per_tick  = SymbolInfoDouble(_symbol, SYMBOL_TRADE_TICK_SIZE);
          zmq_ret+=IntegerToString(_ticket)+": {";
          // zmq_ret+=IntegerToString(PositionGetInteger(POSITION_TICKET))+": {";
 
@@ -1292,12 +1274,12 @@ void DWX_GetOpenPositions(string &zmq_ret)
                   +"'_lots': "+DoubleToString(PositionGetDouble(POSITION_VOLUME))+","
                   +"'_type': "+IntegerToString(PositionGetInteger(POSITION_TYPE))+","
                   +"'_open_price': "+DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN))+","
-                  +"'_open_price': "+DoubleToString(vtick*PositionGetDouble(POSITION_PRICE_OPEN))+","
+                  +"'_open_price': "+DoubleToString(PositionGetDouble(POSITION_PRICE_OPEN)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_open_time': '"+TimeToString(PositionGetInteger(POSITION_TIME),TIME_DATE|TIME_SECONDS)+"',"
                   +"'_SL': "+DoubleToString(PositionGetDouble(POSITION_SL))+","
-                  +"'_t_SL': "+DoubleToString(vtick*PositionGetDouble(POSITION_SL))+","
+                  +"'_t_SL': "+DoubleToString(PositionGetDouble(POSITION_SL)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_TP': "+DoubleToString(PositionGetDouble(POSITION_TP))+","
-                  +"'_t_TP': "+DoubleToString(vtick*PositionGetDouble(POSITION_TP))+","
+                  +"'_t_TP': "+DoubleToString(PositionGetDouble(POSITION_TP)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_pnl': "+DoubleToString(PositionGetDouble(POSITION_PROFIT))+", '_comment': '"+PositionGetString(POSITION_COMMENT)+"',";
 
             zmq_ret+="},";
@@ -1322,7 +1304,7 @@ void DWX_GetPendingOrders(string &zmq_ret)
       if(_ticket>0)
         {
          string _symbol = OrderGetString(ORDER_SYMBOL);
-         double vtick  = SymbolInfoDouble(_symbol, SYMBOL_TRADE_TICK_SIZE);
+         double points_per_tick  = SymbolInfoDouble(_symbol, SYMBOL_TRADE_TICK_SIZE);
          zmq_ret+=IntegerToString(OrderGetInteger(ORDER_TICKET))+": {";
 
          zmq_ret+="'_magic': "+IntegerToString(OrderGetInteger(ORDER_MAGIC))+","
@@ -1330,11 +1312,11 @@ void DWX_GetPendingOrders(string &zmq_ret)
                   +"'_lots': "+DoubleToString(OrderGetDouble(ORDER_VOLUME_CURRENT))+","
                   +"'_type': "+IntegerToString(OrderGetInteger(ORDER_TYPE))+","
                   +"'_open_price': "+DoubleToString(OrderGetDouble(ORDER_PRICE_OPEN))+","
-                  +"'_t_open_price': "+DoubleToString(vtick*OrderGetDouble(ORDER_PRICE_OPEN))+","
+                  +"'_t_open_price': "+DoubleToString(OrderGetDouble(ORDER_PRICE_OPEN)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_SL': "+DoubleToString(OrderGetDouble(ORDER_SL))+","
-                  +"'_t_SL': "+DoubleToString(vtick*OrderGetDouble(ORDER_SL))+","
+                  +"'_t_SL': "+DoubleToString(OrderGetDouble(ORDER_SL)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_TP': "+DoubleToString(OrderGetDouble(ORDER_TP))+","
-                  +"'_t_TP': "+DoubleToString(vtick*OrderGetDouble(ORDER_TP))+","
+                  +"'_t_TP': "+DoubleToString(OrderGetDouble(ORDER_TP)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_comment': '"+OrderGetString(ORDER_COMMENT)+"',";
 
             zmq_ret+="},";
