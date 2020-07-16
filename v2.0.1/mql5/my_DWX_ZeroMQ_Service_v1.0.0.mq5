@@ -692,7 +692,7 @@ void InformPullClient(Socket &pSocket,string message)
 //+------------------------------------------------------------------+
 //|  OPEN NEW POSITION                                               |
 //+------------------------------------------------------------------+
-int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price,double _SL,double _TP,string _comment,int _magic,string &zmq_ret)
+int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price_in_ticks,double _SL,double _TP,string _comment,int _magic,string &zmq_ret)
   {
    int ticket,error;
 
@@ -714,7 +714,7 @@ int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price,double 
    string valid_symbol=(_symbol=="NULL")?Symbol():_symbol;
 
 //double vpoint  = SymbolInfoDouble(valid_symbol, SYMBOL_POINT);
-   double vtick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE);
+   double vtick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE); // units of point/tick
    Debug("Symbol "+valid_symbol+" tick == "+(string)vtick)
    int    vdigits = (int)SymbolInfoInteger(valid_symbol, SYMBOL_DIGITS);
 
@@ -724,7 +724,7 @@ int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price,double 
    double symbol_bid=SymbolInfoDouble(valid_symbol,SYMBOL_BID);
    double symbol_ask=SymbolInfoDouble(valid_symbol,SYMBOL_ASK);
    
-   _price = _price * vtick;  // We make sure to translate price into ticks!
+   double _price = _price_in_ticks * vtick;  // Translate ticks into points
 
 
 // IMPORTANT NOTE: Single-Step stops placing for market orders: no more 2-step procedure for STP|ECN|DMA
@@ -799,7 +799,7 @@ int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price,double 
 //+------------------------------------------------------------------+
 //| PLACE NEW PENDING ORDER                                          |
 //+------------------------------------------------------------------+
-int DWX_OrderOpen(string _symbol,int _type,double _lots,double _price,double _SL,double _TP,string _comment,int _magic,string &zmq_ret)
+int DWX_OrderOpen(string _symbol,int _type,double _lots,double _price_in_ticks,double _SL,double _TP,string _comment,int _magic,string &zmq_ret)
   {
    int ticket,error;
 
@@ -822,14 +822,14 @@ int DWX_OrderOpen(string _symbol,int _type,double _lots,double _price,double _SL
    string valid_symbol=(_symbol=="NULL")?Symbol():_symbol;
 
 //double vpoint  = SymbolInfoDouble(valid_symbol, SYMBOL_POINT);
-   double vtick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE);
+   double vtick  = SymbolInfoDouble(valid_symbol, SYMBOL_TRADE_TICK_SIZE); // units of point/tick
    Debug("Symbol "+valid_symbol+" tick == "+(string)vtick)
    int    vdigits = (int)SymbolInfoInteger(valid_symbol, SYMBOL_DIGITS);
 
    double sl = 0.0;
    double tp = 0.0;
    
-   _price = _price * vtick;  // We make sure to translate price into ticks!
+   double _price = _price_in_ticks * vtick;  // Translate ticks into points
 
    if((ENUM_ORDER_TYPE)_type==ORDER_TYPE_BUY_LIMIT || (ENUM_ORDER_TYPE)_type==ORDER_TYPE_BUY_STOP)
      {
