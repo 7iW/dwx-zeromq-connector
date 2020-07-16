@@ -722,7 +722,7 @@ int DWX_PositionOpen(string _symbol,int _type,double _lots,double _price_in_tick
 
    double symbol_bid=SymbolInfoDouble(valid_symbol,SYMBOL_BID);
    double symbol_ask=SymbolInfoDouble(valid_symbol,SYMBOL_ASK);
-   
+
    double _price = _price_in_ticks * points_per_tick;  // Translate ticks into points
 
 
@@ -822,7 +822,7 @@ int DWX_OrderOpen(string _symbol,int _type,double _lots,double _price_in_ticks,d
 
    double sl = 0.0;
    double tp = 0.0;
-   
+
    double _price = _price_in_ticks * points_per_tick;  // Translate ticks into points
 
    if((ENUM_ORDER_TYPE)_type==ORDER_TYPE_BUY_LIMIT || (ENUM_ORDER_TYPE)_type==ORDER_TYPE_BUY_STOP)
@@ -1231,7 +1231,7 @@ void DWX_PositionsClose_All(string &zmq_ret)
          DWX_CloseAtMarket(-1,zmq_ret,_ticket);
          zmq_ret+="'_response': 'CLOSE_MARKET',";
 
-            zmq_ret+="},";
+         zmq_ret+="},";
         }
      }
    zmq_ret+="},";
@@ -1282,7 +1282,7 @@ void DWX_GetOpenPositions(string &zmq_ret)
                   +"'_t_TP': "+DoubleToString(PositionGetDouble(POSITION_TP)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_pnl': "+DoubleToString(PositionGetDouble(POSITION_PROFIT))+", '_comment': '"+PositionGetString(POSITION_COMMENT)+"',";
 
-            zmq_ret+="},";
+         zmq_ret+="},";
         }
      }
    zmq_ret+="},";
@@ -1319,7 +1319,7 @@ void DWX_GetPendingOrders(string &zmq_ret)
                   +"'_t_TP': "+DoubleToString(OrderGetDouble(ORDER_TP)/points_per_tick)+","  // in ticks, should be a whole number
                   +"'_comment': '"+OrderGetString(ORDER_COMMENT)+"',";
 
-            zmq_ret+="},";
+         zmq_ret+="},";
         }
      }
    zmq_ret+="},";
