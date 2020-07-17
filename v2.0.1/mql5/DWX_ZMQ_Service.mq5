@@ -36,9 +36,9 @@
                          +(message=="" ? "" : ", "+message); \
       \
       Alert("Assertion failed! "+fullMessage); \
-      double x[]; \
-      ArrayResize(x, 0); \
-      x[1] = 0.0; \
+      \ // double x[]; \
+      \ // ArrayResize(x, 0); \
+      \ // x[1] = 0.0; \
      }
 
 // Required: MQL-ZMQ from https://github.com/dingmaotu/mql-zmq
